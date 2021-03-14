@@ -132,19 +132,62 @@ benefifit from the increased width）
 
 采用编码解码架构，与SegNet和ENet类似；与FCN这种需要融合来自不同层特征以获得细粒度输出的结构相反，我们的方法遵循一种更顺序的体系结构，它基于产生下采样特征映射的编码器段和随后的解码器段，对特征映射进行采样以匹配输入分辨率。没有跳跃连接，只有编码解码。
 
-1-16是编码部分，由residual blocks和下采样组成；下采样会降低像素的精度，但是也有两个优点：它让更深层的层收集更多的上下文(以改进分类)，并有助于减少计算。因此，为了保持良好的平衡，我们执行三个下采样：在第1层、第2层和第8层。我们的下采样器块，灵感来自于 ENet的初始块，通过连接单个3x3，步长为2的卷积和最大池化模块的并行输出来执行下采样。ENet只将它用于执行早期下采样的初始块，但是我们所有的下采样都使用这种模块。此外，我们还在non-bt-1D层中插入了一些扩展的卷积[27]，以收集更多的上下文，这就提高了我们的实验的准确性。
+1-16是编码部分，由residual blocks和downsampling blocks组成；下采样会降低像素的精度（降低空间分辨率），但是也有两个优点：下采样可以获得深层次的语义信息收集更多的上下文信息<span style="color:red">（ it lets the deeper layers gather more context (to improve classifification)）</span>，并有助于减少计算。因此，为了保持良好的平衡，我们执行三个下采样：在第1层、第2层和第8层。**我们的下采样块，灵感来自于 ENet的初始块**
+
+<img src="https://img2018.cnblogs.com/blog/1229928/201811/1229928-20181123200423168-1352538922.png">
+
+- （a）ENet的initial block。
+
+通过连接单个3x3，步长为2的卷积和最大池化模块的并行输出来执行下采样。ENet只将它用于执行早期下采样的初始块，但是我们所有的下采样都使用这种模块。此外，我们还在non-bt-1D层中插入了一些扩展的卷积（dilated convolutions），以收集更多的上下文，这就提高了我们的实验的准确性。这种技术已经被证明（在计算成本和参数方面）比使用更大的核大小更有效。
 
 
 
+解码部分是17-23。它主要的任务是对编码器的特征映射进行上采样，以匹配输入分辨率。有一个小型的解码器，其唯一目的是通过微调细节对编码器的输出进行上采样。与SegNet和ENet相反，我们没有使用max-unpooling操作进行上采样，我们使用的是步长为2的简单反卷积。使用反卷积的有点事不需要共享编码器的pooling indexes。因此，deconvolutions简化了内存和计算需求
+
+# 实验
+
+## 通用设置
+
+未使用注释粗糙的图片。
+
+使用注释良好的进行训练，训练过程中没有使用验证集。
+
+Iou作为衡量标准。
+
+$Iou = \frac{TP}{TP+FP+FN}$
+
+- TP == True positives
+- FP == False positives
+- FN == False positives
+
+随机梯度下降的Adam优化器
+
+BatchSize = 12， momentum=0.9，weight decay of $2e^{-4}$，学习率$5e^4$
+
+that the training error becomes stagnant, in order to accelerate convergence
+
+## Comparison of residual layers
+
+the bottleneck (bt)
+
+the non-bottleneck (non-bt) 
+
+our proposed non-bottleneck-1D (non-bt-1D) designs.
+
+三种对比实验。
+
+ (Fig. 2 (b)), which uses 1x1 convolutions to reduce the number of feature maps computed internally in the 3x3 convolution by a factor of 4。
+
+参数量是：weights和biases的总数（ The number of parameters (#Par) is calculated as the total number of weights and biases of each network.）
+
+图片是$2048*1024$,但是输入模型的图片大小是$1024*512$，最终会还原到原图的大小。
 
 
 
-
-
-
-
-
-
-
-
+| Residual Block    | without bias                                  | with bias                                                 |
+| ----------------- | --------------------------------------------- | --------------------------------------------------------- |
+| bottleneck        | 1x1x256x64 + 3x3x64x64 + 1x1x64x256 = 69632   | (1x1x256+1)x64 + (3x3x64+1)x64 + (1x1x64+1)x256 = 70016   |
+| non-bottleneck    | 3x3x64x64x2 = 73728                           | (3x3x64+1)x64x2 = 73856                                   |
+| bottleneck-1D     | 1x1x256x64 + 3x1x64x64x2 + 1x1x64x256 = 57344 | (1x1x256+1)x64 + (3x1x64+1)x64x2 + (1x1x64+1)x256 = 57792 |
+| non-bottleneck-1D | 3x1x64x64x4 = 49152                           | (3x1x64+1)x64x4 = 49408                                   |
 
