@@ -91,6 +91,12 @@
 
 促进了广泛灵活的架构设计。
 
+----
+
+**intuitive**
+
+- 直觉的；凭直觉获知的
+
 ---
 
 **感觉不错的句子**
@@ -178,7 +184,7 @@ RoIPooling = Region of interest pooling
 
 画出感兴趣的区域，我们希望它输出$2*2$的feature  map，所以，把它分成四份（可以不均匀），然后分别进行最大池化（也可以其他池化）。
 
-<img src="../../../pics/CV_blog/instance segment/ROI_Pooling.webp" style="float:left">
+<img src="../../pics/CV_blog/instance segment/ROI_Pooling.webp" style="float:left">
 
 **啥是RoIWarp？**
 
@@ -188,7 +194,7 @@ RoIPooling = Region of interest pooling
 
 使生成的候选框region proposal（候选区域）映射产生固定大小的feature map时提出的。
 
-<img src="../../../pics/CV_blog/instance segment/explain_roialign.png" style="float:left">
+<img src="../../pics/CV_blog/instance segment/explain_roialign.png" style="float:left">
 
 针对上图，有着类似的映射
 
@@ -214,7 +220,7 @@ RoIPooling = Region of interest pooling
 
 ### 与Faster R-CNN的异同
 
-<img src="../../../pics/CV_blog/instance segment/compare_with_mask rcnn.png" style="float:left">
+<img src="../../pics/CV_blog/instance segment/compare_with_mask rcnn.png" style="float:left">
 
 将有截断的RoIPooling改成RoIAlign
 
@@ -234,7 +240,7 @@ Feature Pyramid Networks（特征金字塔网络）
 
 因为COCO提供80类分割的实例，所以最后的输出的通道数为80。
 
-<img src="../../../pics/CV_blog/instance segment/mask_branch.png" style="float:left">
+<img src="../../pics/CV_blog/instance segment/mask_branch.png" style="float:left">
 
 因为完全基于检测的分割，受限于检测的精度。对于未能检测到的小部分，分割效果自然不好。Mask R-CNN让网络自己选择，选择最好尺度的框用于分割，大尺度下的区域可以的分割操作肯定比紧凑的不完整信息要好。直观的影响便是，出现检测重叠部位，出现“块效应”。
 
@@ -319,7 +325,7 @@ ROI是Region of Interest的简写，指的是在“特征图上的框”；
 
 先检测出目标，再对目标进行分割。这样，目标检测效果的好坏会直接影响到分割效果的好坏。
 
-<img src="../../../pics/CV_blog/instance segment/mask_rcnn_framework.png" style="float:left">
+<img src="../../pics/CV_blog/instance segment/mask_rcnn_framework.png" style="float:left">
 
 ## 主要思想
 
@@ -361,17 +367,32 @@ Mask R-CNN：简单，灵活和通用的目标分割框架。
 
 ## Introduction
 
-提出了Mask R-CNN，继承自Faster R-CNN，增加了一个预测分割的并行分支（对每个RoI进行分割）。
+**说明了实例分割的难度：** 实例分割是结合了计算机视觉中的一些经典任务：如目标检测，语义分割。
 
-mask branch用的是FCN，我觉得我们测评的改成UNet比较好。
+**提出了Mask R-CNN：**在Faster R-CNN的基础上，在每个Region of Interest（RoI）上增加了一个segmentation mask预测分支，和classification分支和bounding box回归并行运行。
 
-他说，Faster R-CNN改成Mask R-CNN很简单，我们不如再Faster R-CNN的基础上进行修改。（需要什么样的标签数据？？）
+![image-20210315200621994](..\..\pics\CV\ISG\Mask R-CNN\image-20210315200621994.png)
 
-Mask R-CNN中提出了一个简单的，量化无关的层，称为RoIAlign，可以保留精确的空间位置。
+mask分支是将一个小型的FCN应用于每个RoI（感兴趣区域），预测出一个像素到像素的segmentation mask。Mask R-CNN是基于Faster R-CNN框架的，实现起来比较简单，且设计起来很灵活。mask分支只会增加少量的计算开销，运行速度仍然会很快。
 
-Mask R-CNN是为每个类独立地预测二进制掩码，这样不会跨类别竞争。并且依赖于网络的RoI分类分支来预测类别。相比之下，FCN通常执行每像素多类分类，分割和分类同时进行，基于我们的实验，对于目标分割效果不佳。【<span style="color:red">为每个类独立的预测二进制掩码，不会引起跨类别竞争。机器学习P63页，多分类和二分类的适用场景和对比</span>】
+Mask R-CNN是Faster R-CNN的扩展，但是构建mask分支也是十分重要的。Faster R-CNN不是为网络的输入到输出之间pixel-to-pixel对齐所设计的（端到端，即输入图片和输出图片大小一致）。RoIPool是用于处理instance的核心操作，即便是这个核心操作也是执行粗糙的空间量化以进行特征提取（performs coarse spatial quantization for feature extraction. ）。<span style="color:green">为了解决特征提取粗糙的问题，我们提出了RoIAlign，可以保留精确的空间位置。（To fix the misalignment, we propose a simple, quantization-free layer, called RoIAlign, that faithfully preserves exact spatial locations）</span>
+
+- 虽然只是把RoIPool改为了RoIAlign，但是效果提升很大！
+- 其次，发现mask和class prediction的分离（decouple）很重要！我们独立地为每个类预测一个二进制mask，类与类之间没有竞争【<span style="color:red">为每个类独立的预测二进制掩码，不会引起跨类别竞争。机器学习P63页，多分类和二分类的适用场景和对比</span>】，并依靠网络的RoI分类分支来预测类别。FCN通常是按像素进行多分类的，将分割和分类结合在一起，根据作者的实验，分割和分类结合在一起会使分割的效果很差。
+
+没有任何花里胡哨的东西，我们的效果就是好！就是出色！且做了消融实验（对比实验！），分析了那些是核心因素，影响网络的预测效果。
 
 ## Related Work
+
+基于Region-based的CNN（R-CNN）进行bounding-box对象检测的方法是处理可管理数量的候选对象区域，并在每个RoI上独立评估卷积网络。（The Region-based CNN (R-CNN) approach to bounding-box object detection is to attend to a manageable number of candidate object regions [42, 20] and evaluate convolutional networks independently on each RoI.）<span style="color:green">R-CNN进行了扩展，允许在feature maps上使用PoIPool处理RoIs，从而实现了更快的速度和更高的准确性。（R-CNN was extended to allow attending to RoIs on feature maps using RoIPool, leading to fast speed and better accuracy.）</span>Faster R-CNN通过区域建议网络学习注意力机制来推进这一潮流（advanced this stream）。Faster R-CNN对于许多后续的改进是灵活和健壮的，并且是当前几个基准中的领先框架。
+
+----------------------
+
+2021-3-15
+
+
+
+
 
 介绍像素到像素对齐，这是Fast/Faster R-CNN的主要缺失。
 
