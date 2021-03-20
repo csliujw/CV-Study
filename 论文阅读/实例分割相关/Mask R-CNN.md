@@ -386,9 +386,114 @@ Mask R-CNN是Faster R-CNN的扩展，但是构建mask分支也是十分重要的
 
 基于Region-based的CNN（R-CNN）进行bounding-box对象检测的方法是处理可管理数量的候选对象区域，并在每个RoI上独立评估卷积网络。（The Region-based CNN (R-CNN) approach to bounding-box object detection is to attend to a manageable number of candidate object regions [42, 20] and evaluate convolutional networks independently on each RoI.）<span style="color:green">R-CNN进行了扩展，允许在feature maps上使用PoIPool处理RoIs，从而实现了更快的速度和更高的准确性。（R-CNN was extended to allow attending to RoIs on feature maps using RoIPool, leading to fast speed and better accuracy.）</span>Faster R-CNN通过区域建议网络学习注意力机制来推进这一潮流（advanced this stream）。Faster R-CNN对于许多后续的改进是灵活和健壮的，并且是当前几个基准中的领先框架。
 
-----------------------
+**实例分割：**在R-CNN的驱动下，许多实例分割的方法都是基于segment proposals的。早期的方法采用自上而下的分段。DeepMask和之后的工作提出了分割后选，在通过Fast R-CNN进行分类。这些方法，分割先于识别，不仅慢，而且精度低。balabala。我们的方法基于mask和class labels并行预测，更简单、更灵活。之后提了一下FCIS，效果不错，但是对于有重叠的实例，效果不行。
 
-2021-3-15
+有些方法是基于分段优先的策略，但是Mask R-CNN是基于实例优先的策略。
+
+## Mask R-CNN
+
+在Faster R-CNN的基础上加了一个mask分支（加了Mask分支后就变成了3个分支了）。Mask需要更精细的对象的空间信息。下面会介绍Mask R-CNN是如何解决这个问题的，包括像素到像素的对齐。
+
+**Faster R-CNN快速回顾：**Faster有两个阶段。
+
+- 阶段一称为Region Proposal Network（RPN），提出候选对象边界框。
+- 阶段二：本质上是Fast R-CNN，使用RoIPool提取每个候选框的特征，并执行分类和bounding-box regression。
+
+两个阶段可以共享feature以便更快地推理。
+
+**Mask R-CNN介绍：**Mask R-CNN采用了Faster R-CNN中的两个阶段的procedure。
+
+- 第一阶段，Mask R-CNN和Faster R-CNN一样，使用RPN。
+- 第二阶段，预测类和box offset的时候，Mask R-CNN还为每个RoI输出一个二进制mask。
+
+Mask R-CNN定义了多任务损失：$L = L_{cls} + L_{box} + L_{mask}$。mask分支对每个RoI都有一个$km^2$维的输出。编码的分辨率为$m*m$的K个二进制mask。为此，我们逐像素应用了sigmoid，定义$L_{mask}$为平均二进制crossentropy loss。对于RoI和ground-truth class k，$L_{mask}$仅在第k个mask上定义（其他mask输出不会造成损失）。
+
+---
+
+我们对$L_{mask}$定义，允许网络为每个类生成mask，且与其他类不存在竞争关系（即只有这个类，其他类两种情况，做二分类！）我们依赖于专门的分类分支来预测用于选择输出掩码的类标签（we rely on the dedicated classification branch to predict the class label used to select the output mask）。<span style="color:green">其实就是把mask和calss预测解耦！</span>我们的方法与把FCN应用于语义分割的通常做法不一样，语义分割通常使用per-pixel softmax和多项 cross-entropy loss。FCN的这种做法，会引发跨类别的mask竞争。我们的做法（Mask R-CNN）使用的是per-pixel sigmoid 和二进制损失，不会存mask跨类比竞争。实验表明，我们的做法确实是更好的。
+
+**段落总结：**Mask R-CNN的mask损失和class损失是没有直接关联的。且mask的预测是采用二进制损失，不会同时预测多分类，预测的是二分类问题，是当前实例还是不是当前实例！
+
+----
+
+**Mask Representation：**mask可以对输入对象的空间布局进行编码。因此，与通过全连接层不可避免地折叠成短输出向量的类标签和框偏移不同，提取的masks空间结构可以自然的通过卷积解决pixel-to-pixel的对应问题。具体来说：我们使用FCN从每个RoI中预测出一个$m*m$的mask。这可以允许mask的每层都保留$m*m$的空间信息，不用将其变为向量（变为向量会丢失空间信息）。与以前用fc（全连接层）进行mask预测不同，FCN（全卷积神经网络）参数少，且效果好！
+
+mask的预测需要pixel-to-pixel，这就要求我们的PoI特征（他们本身就是small feature maps）进行良好对齐，以确保良好的保留显式的per-pixel空间对应。（像素直接要对对应，这样才有利于mask 预测）。这促使我们开发了RoIAlign层，确保per-pixel空间对应，这对mask prediction的作用很大！
+
+
+
+**RoIAlign：**RoIPool是用于从每一个RoI中突出小特征图的标准操作。RoIPool首先将浮点数的RoI量化成特征映射图的离散粒度，然后这些量化的RoI被细分到本身量化好的空间盒子中，最后聚合每个盒子所包含的特征值（使用最大值池化）。量化是这样进行的，例如：在一个连续坐标x上计算[x/16]，其中16为特征图的跨度，[·]表示范围；同样的，再将其划分为多个容器时进行量化（例如：7x7）。这些量化在RoI和提取的特征之间引入了不对齐。这种不对齐可能不会影响分类，因为它对于小的变化具有鲁棒性，但是对于预测像素准确度的掩膜会产生很大额消极影响。
+
+为了解决这个问题，我们提出了RoIAlign层，该层去除了RoIPool的粗量化，使提取的特征与输入良好的对齐。我们提出的改变非常简单：我们避免了对RoI边界进行量化（即：我们使用x/16代替[x/16]）。使用双线性插值在每一个RoI盒子的四个固定采样点计算输入特征的准确值，然后聚合计算结果（采用最大值池化）。
+
+RoIAlign取得了巨大的提升。我们也比较了[[10](https://link.jianshu.com?t=https%3A%2F%2Farxiv.org%2Fpdf%2F1512.04412.pdf)]中提出的RoIWarp操作。不想RoIAlign，RoIWarp忽略了对齐问题，他在[10]中的实现和RoIPool类似。因此，尽管RoIWarp也采用了双线性插值，但是在实验中，它的表现和RoIPool相同（更多详细信息见表2c），这证明了对齐的关键作用。
+
+![image-20210317113635152](..\..\pics\CV\ISG\Mask R-CNN\image-20210317113635152.png)
+
+
+
+[Mask R-CNN用法](https://www.jianshu.com/p/0b23b5bc17fa)
+
+[Mask R-CNN详细翻译](https://www.jianshu.com/p/6f5e5afa2fad)
+
+[Faster R-CNN中英对照](https://www.jianshu.com/p/26ca6f6bd1a1)
+
+FPN特征金字塔：FPN使用带有横向连接的自顶向下体系结构，从单尺度输入构建网络内特征金字塔。
+
+使用ResNet-FPN骨干进行特征提取对Mask R-CNN在准确性和速度方面都有很好的提高。
+
+
+
+我们注意到我们的掩模分支有一个简单的结构。更复杂的设计有提高性能的潜力，但不是本研究的重点。
+
+
+
+
+
+**Figure 4. Head Architecture：**
+
+![image-20210317115254466](..\..\pics\CV\ISG\Mask R-CNN\image-20210317115254466.png)
+
+- 左侧：ResNet C4 backbones；res5表示ResNet的第五阶段，为简单起见，我们对其进行了更改，以便第一个转换以7×7的RoI运行，步幅为1（而不是14×14 /步幅2）。
+- 右侧：FPN backbones；“×4”表示四个连续转化的叠加。 
+
+数字表示空间分辨率和通道。
+
+剪头表示conv、deconv或fc；conv保持空间维度，而deconv增加空间维度
+
+所有的conv都是$3*3$，除了输出的conv是$1*1$，deconvs是$2*2$且步长为2，hidden layers激活函数使用ReLU。
+
+
+
+### Implementation Details
+
+**train：**ground-truth box的Iou为0.5以上才是正例。mask loss 只在正例的RoIs上定义。
+
+
+
+修改RoI区域的大小。
+
+RoIAlign也要修改，修改大一些，然后用Unet的特定去试，再用UNet++
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
