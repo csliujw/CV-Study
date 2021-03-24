@@ -91,6 +91,12 @@
 
 促进了广泛灵活的架构设计。
 
+----
+
+**intuitive**
+
+- 直觉的；凭直觉获知的
+
 ---
 
 **感觉不错的句子**
@@ -178,7 +184,7 @@ RoIPooling = Region of interest pooling
 
 画出感兴趣的区域，我们希望它输出$2*2$的feature  map，所以，把它分成四份（可以不均匀），然后分别进行最大池化（也可以其他池化）。
 
-<img src="../../../pics/CV_blog/instance segment/ROI_Pooling.webp" style="float:left">
+<img src="../../pics/CV_blog/instance segment/ROI_Pooling.webp" style="float:left">
 
 **啥是RoIWarp？**
 
@@ -188,7 +194,7 @@ RoIPooling = Region of interest pooling
 
 使生成的候选框region proposal（候选区域）映射产生固定大小的feature map时提出的。
 
-<img src="../../../pics/CV_blog/instance segment/explain_roialign.png" style="float:left">
+<img src="../../pics/CV_blog/instance segment/explain_roialign.png" style="float:left">
 
 针对上图，有着类似的映射
 
@@ -214,7 +220,7 @@ RoIPooling = Region of interest pooling
 
 ### 与Faster R-CNN的异同
 
-<img src="../../../pics/CV_blog/instance segment/compare_with_mask rcnn.png" style="float:left">
+<img src="../../pics/CV_blog/instance segment/compare_with_mask rcnn.png" style="float:left">
 
 将有截断的RoIPooling改成RoIAlign
 
@@ -234,7 +240,7 @@ Feature Pyramid Networks（特征金字塔网络）
 
 因为COCO提供80类分割的实例，所以最后的输出的通道数为80。
 
-<img src="../../../pics/CV_blog/instance segment/mask_branch.png" style="float:left">
+<img src="../../pics/CV_blog/instance segment/mask_branch.png" style="float:left">
 
 因为完全基于检测的分割，受限于检测的精度。对于未能检测到的小部分，分割效果自然不好。Mask R-CNN让网络自己选择，选择最好尺度的框用于分割，大尺度下的区域可以的分割操作肯定比紧凑的不完整信息要好。直观的影响便是，出现检测重叠部位，出现“块效应”。
 
@@ -319,7 +325,7 @@ ROI是Region of Interest的简写，指的是在“特征图上的框”；
 
 先检测出目标，再对目标进行分割。这样，目标检测效果的好坏会直接影响到分割效果的好坏。
 
-<img src="../../../pics/CV_blog/instance segment/mask_rcnn_framework.png" style="float:left">
+<img src="../../pics/CV_blog/instance segment/mask_rcnn_framework.png" style="float:left">
 
 ## 主要思想
 
@@ -361,17 +367,137 @@ Mask R-CNN：简单，灵活和通用的目标分割框架。
 
 ## Introduction
 
-提出了Mask R-CNN，继承自Faster R-CNN，增加了一个预测分割的并行分支（对每个RoI进行分割）。
+**说明了实例分割的难度：** 实例分割是结合了计算机视觉中的一些经典任务：如目标检测，语义分割。
 
-mask branch用的是FCN，我觉得我们测评的改成UNet比较好。
+**提出了Mask R-CNN：**在Faster R-CNN的基础上，在每个Region of Interest（RoI）上增加了一个segmentation mask预测分支，和classification分支和bounding box回归并行运行。
 
-他说，Faster R-CNN改成Mask R-CNN很简单，我们不如再Faster R-CNN的基础上进行修改。（需要什么样的标签数据？？）
+![image-20210315200621994](..\..\pics\CV\ISG\Mask R-CNN\image-20210315200621994.png)
 
-Mask R-CNN中提出了一个简单的，量化无关的层，称为RoIAlign，可以保留精确的空间位置。
+mask分支是将一个小型的FCN应用于每个RoI（感兴趣区域），预测出一个像素到像素的segmentation mask。Mask R-CNN是基于Faster R-CNN框架的，实现起来比较简单，且设计起来很灵活。mask分支只会增加少量的计算开销，运行速度仍然会很快。
 
-Mask R-CNN是为每个类独立地预测二进制掩码，这样不会跨类别竞争。并且依赖于网络的RoI分类分支来预测类别。相比之下，FCN通常执行每像素多类分类，分割和分类同时进行，基于我们的实验，对于目标分割效果不佳。【<span style="color:red">为每个类独立的预测二进制掩码，不会引起跨类别竞争。机器学习P63页，多分类和二分类的适用场景和对比</span>】
+Mask R-CNN是Faster R-CNN的扩展，但是构建mask分支也是十分重要的。Faster R-CNN不是为网络的输入到输出之间pixel-to-pixel对齐所设计的（端到端，即输入图片和输出图片大小一致）。RoIPool是用于处理instance的核心操作，即便是这个核心操作也是执行粗糙的空间量化以进行特征提取（performs coarse spatial quantization for feature extraction. ）。<span style="color:green">为了解决特征提取粗糙的问题，我们提出了RoIAlign，可以保留精确的空间位置。（To fix the misalignment, we propose a simple, quantization-free layer, called RoIAlign, that faithfully preserves exact spatial locations）</span>
+
+- 虽然只是把RoIPool改为了RoIAlign，但是效果提升很大！
+- 其次，发现mask和class prediction的分离（decouple）很重要！我们独立地为每个类预测一个二进制mask，类与类之间没有竞争【<span style="color:red">为每个类独立的预测二进制掩码，不会引起跨类别竞争。机器学习P63页，多分类和二分类的适用场景和对比</span>】，并依靠网络的RoI分类分支来预测类别。FCN通常是按像素进行多分类的，将分割和分类结合在一起，根据作者的实验，分割和分类结合在一起会使分割的效果很差。
+
+没有任何花里胡哨的东西，我们的效果就是好！就是出色！且做了消融实验（对比实验！），分析了那些是核心因素，影响网络的预测效果。
 
 ## Related Work
+
+基于Region-based的CNN（R-CNN）进行bounding-box对象检测的方法是处理可管理数量的候选对象区域，并在每个RoI上独立评估卷积网络。（The Region-based CNN (R-CNN) approach to bounding-box object detection is to attend to a manageable number of candidate object regions [42, 20] and evaluate convolutional networks independently on each RoI.）<span style="color:green">R-CNN进行了扩展，允许在feature maps上使用PoIPool处理RoIs，从而实现了更快的速度和更高的准确性。（R-CNN was extended to allow attending to RoIs on feature maps using RoIPool, leading to fast speed and better accuracy.）</span>Faster R-CNN通过区域建议网络学习注意力机制来推进这一潮流（advanced this stream）。Faster R-CNN对于许多后续的改进是灵活和健壮的，并且是当前几个基准中的领先框架。
+
+**实例分割：**在R-CNN的驱动下，许多实例分割的方法都是基于segment proposals的。早期的方法采用自上而下的分段。DeepMask和之后的工作提出了分割后选，在通过Fast R-CNN进行分类。这些方法，分割先于识别，不仅慢，而且精度低。balabala。我们的方法基于mask和class labels并行预测，更简单、更灵活。之后提了一下FCIS，效果不错，但是对于有重叠的实例，效果不行。
+
+有些方法是基于分段优先的策略，但是Mask R-CNN是基于实例优先的策略。
+
+## Mask R-CNN
+
+在Faster R-CNN的基础上加了一个mask分支（加了Mask分支后就变成了3个分支了）。Mask需要更精细的对象的空间信息。下面会介绍Mask R-CNN是如何解决这个问题的，包括像素到像素的对齐。
+
+**Faster R-CNN快速回顾：**Faster有两个阶段。
+
+- 阶段一称为Region Proposal Network（RPN），提出候选对象边界框。
+- 阶段二：本质上是Fast R-CNN，使用RoIPool提取每个候选框的特征，并执行分类和bounding-box regression。
+
+两个阶段可以共享feature以便更快地推理。
+
+**Mask R-CNN介绍：**Mask R-CNN采用了Faster R-CNN中的两个阶段的procedure。
+
+- 第一阶段，Mask R-CNN和Faster R-CNN一样，使用RPN。
+- 第二阶段，预测类和box offset的时候，Mask R-CNN还为每个RoI输出一个二进制mask。
+
+Mask R-CNN定义了多任务损失：$L = L_{cls} + L_{box} + L_{mask}$。mask分支对每个RoI都有一个$km^2$维的输出。编码的分辨率为$m*m$的K个二进制mask。为此，我们逐像素应用了sigmoid，定义$L_{mask}$为平均二进制crossentropy loss。对于RoI和ground-truth class k，$L_{mask}$仅在第k个mask上定义（其他mask输出不会造成损失）。
+
+---
+
+我们对$L_{mask}$定义，允许网络为每个类生成mask，且与其他类不存在竞争关系（即只有这个类，其他类两种情况，做二分类！）我们依赖于专门的分类分支来预测用于选择输出掩码的类标签（we rely on the dedicated classification branch to predict the class label used to select the output mask）。<span style="color:green">其实就是把mask和calss预测解耦！</span>我们的方法与把FCN应用于语义分割的通常做法不一样，语义分割通常使用per-pixel softmax和多项 cross-entropy loss。FCN的这种做法，会引发跨类别的mask竞争。我们的做法（Mask R-CNN）使用的是per-pixel sigmoid 和二进制损失，不会存mask跨类比竞争。实验表明，我们的做法确实是更好的。
+
+**段落总结：**Mask R-CNN的mask损失和class损失是没有直接关联的。且mask的预测是采用二进制损失，不会同时预测多分类，预测的是二分类问题，是当前实例还是不是当前实例！
+
+----
+
+**Mask Representation：**mask可以对输入对象的空间布局进行编码。因此，与通过全连接层不可避免地折叠成短输出向量的类标签和框偏移不同，提取的masks空间结构可以自然的通过卷积解决pixel-to-pixel的对应问题。具体来说：我们使用FCN从每个RoI中预测出一个$m*m$的mask。这可以允许mask的每层都保留$m*m$的空间信息，不用将其变为向量（变为向量会丢失空间信息）。与以前用fc（全连接层）进行mask预测不同，FCN（全卷积神经网络）参数少，且效果好！
+
+mask的预测需要pixel-to-pixel，这就要求我们的PoI特征（他们本身就是small feature maps）进行良好对齐，以确保良好的保留显式的per-pixel空间对应。（像素直接要对对应，这样才有利于mask 预测）。这促使我们开发了RoIAlign层，确保per-pixel空间对应，这对mask prediction的作用很大！
+
+
+
+**RoIAlign：**RoIPool是用于从每一个RoI中突出小特征图的标准操作。RoIPool首先将浮点数的RoI量化成特征映射图的离散粒度，然后这些量化的RoI被细分到本身量化好的空间盒子中，最后聚合每个盒子所包含的特征值（使用最大值池化）。量化是这样进行的，例如：在一个连续坐标x上计算[x/16]，其中16为特征图的跨度，[·]表示范围；同样的，再将其划分为多个容器时进行量化（例如：7x7）。这些量化在RoI和提取的特征之间引入了不对齐。这种不对齐可能不会影响分类，因为它对于小的变化具有鲁棒性，但是对于预测像素准确度的掩膜会产生很大额消极影响。
+
+为了解决这个问题，我们提出了RoIAlign层，该层去除了RoIPool的粗量化，使提取的特征与输入良好的对齐。我们提出的改变非常简单：我们避免了对RoI边界进行量化（即：我们使用x/16代替[x/16]）。使用双线性插值在每一个RoI盒子的四个固定采样点计算输入特征的准确值，然后聚合计算结果（采用最大值池化）。
+
+RoIAlign取得了巨大的提升。我们也比较了[[10](https://link.jianshu.com?t=https%3A%2F%2Farxiv.org%2Fpdf%2F1512.04412.pdf)]中提出的RoIWarp操作。不想RoIAlign，RoIWarp忽略了对齐问题，他在[10]中的实现和RoIPool类似。因此，尽管RoIWarp也采用了双线性插值，但是在实验中，它的表现和RoIPool相同（更多详细信息见表2c），这证明了对齐的关键作用。
+
+![image-20210317113635152](..\..\pics\CV\ISG\Mask R-CNN\image-20210317113635152.png)
+
+
+
+[Mask R-CNN用法](https://www.jianshu.com/p/0b23b5bc17fa)
+
+[Mask R-CNN详细翻译](https://www.jianshu.com/p/6f5e5afa2fad)
+
+[Faster R-CNN中英对照](https://www.jianshu.com/p/26ca6f6bd1a1)
+
+FPN特征金字塔：FPN使用带有横向连接的自顶向下体系结构，从单尺度输入构建网络内特征金字塔。
+
+使用ResNet-FPN骨干进行特征提取对Mask R-CNN在准确性和速度方面都有很好的提高。
+
+
+
+我们注意到我们的掩模分支有一个简单的结构。更复杂的设计有提高性能的潜力，但不是本研究的重点。
+
+
+
+
+
+**Figure 4. Head Architecture：**
+
+![image-20210317115254466](..\..\pics\CV\ISG\Mask R-CNN\image-20210317115254466.png)
+
+- 左侧：ResNet C4 backbones；res5表示ResNet的第五阶段，为简单起见，我们对其进行了更改，以便第一个转换以7×7的RoI运行，步幅为1（而不是14×14 /步幅2）。
+- 右侧：FPN backbones；“×4”表示四个连续转化的叠加。 
+
+数字表示空间分辨率和通道。
+
+剪头表示conv、deconv或fc；conv保持空间维度，而deconv增加空间维度
+
+所有的conv都是$3*3$，除了输出的conv是$1*1$，deconvs是$2*2$且步长为2，hidden layers激活函数使用ReLU。
+
+
+
+### Implementation Details
+
+**train：**ground-truth box的Iou为0.5以上才是正例。mask loss 只在正例的RoIs上定义。
+
+
+
+修改RoI区域的大小。
+
+RoIAlign也要修改，修改大一些，然后用Unet的特定去试，再用UNet++
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 介绍像素到像素对齐，这是Fast/Faster R-CNN的主要缺失。
 
