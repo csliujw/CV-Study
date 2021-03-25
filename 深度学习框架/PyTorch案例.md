@@ -322,3 +322,27 @@ net.eval()
 net.load_state_dict(torch.load('lenet.pth'))
 ```
 
+## 大批量训练
+
+- torch.no_grad()：是不进行求梯度。避免在验证/val/test的时候消耗过多显存，减少显存的开销。
+- optimizer.zero_grad() pytorch需要进行梯度清零，不清零的话梯度会进行累加。
+  - 因此，我们可以通过这个特点，变相实现大批量的训练。具体代码demo如下：
+
+```python
+for i,(images,target) in enumerate(train_loader):
+    images = images.cuda()
+    target = target.cuda()
+    outputs = model(images)
+    loss = criterion(outputs,target)
+    # accumulation_steps 次 for 的总数算一个big batchsize
+    # 所以我们求每次loss的平均值。 大致意思就是 (loss_1 / 5 + loss_2 / 5+ loss_3 / 5 + loss_4 / 5 + loss_5 / 5)
+    loss = loss / accumulation_steps
+    loss.backward()
+    
+    if ( (i+1) % accumulation_steps ) == 0:
+        optimizer.step()
+        optimizer.zero_grad()
+```
+
+
+
