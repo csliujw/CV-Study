@@ -28,7 +28,25 @@ Factorized Convolution Operator（因式分解的卷积操作）
 
 <img src="../../pics/CV/ISG/ERFNet/image-20210312115333134.png">
 
-<img src="../../pics/CV/ISG/ERFNet/image-20210312115349713.png"> 
+​				<img src="../../pics/CV/ISG/ERFNet/image-20210312115349713.png" > 
+
+
+
+$$
+Non-bottlenck：(3*3*w+1)*w+(3*3*w+1)*w = 18w^2 + 2w = 18w_0^2 + 2w_0
+$$
+
+$$
+Bottlenck：(11w+1)\frac{w}{4} +(33\frac{w}{4} + 1)\frac{w}{4} + (11\frac{w}{4} + 1)*w = \frac{17w^2}{16}+ \frac{3w}{2} = 17w_0^2+ 6w_0
+$$
+
+$$
+Non-bt-1D：(3*1*w+1)*w+(1*3*w+1)*w+(3*1*w+1)*w+(1*3*w+1)*w=12w^2+4w=12w_0^2+4w_0
+$$
+
+
+
+
 
 ## 相关工作
 
@@ -190,20 +208,5 @@ our proposed non-bottleneck-1D (non-bt-1D) designs.
 | non-bottleneck    | 3x3x64x64x2 = 73728                           | (3x3x64+1)x64x2 = 73856                                   |
 | bottleneck-1D     | 1x1x256x64 + 3x1x64x64x2 + 1x1x64x256 = 57344 | (1x1x256+1)x64 + (3x1x64+1)x64x2 + (1x1x64+1)x256 = 57792 |
 | non-bottleneck-1D | 3x1x64x64x4 = 49152                           | (3x1x64+1)x64x4 = 49408                                   |
-
-
-
-$$
-Non-bottlenck：(3*3*w+1)*w+(3*3*w+1)*w = 18w^2 + 2w = 18w_0^2 + 2w_0
-$$
-
-$$
-Bottlenck：(11w+1)\frac{w}{4} +(33\frac{w}{4} + 1)\frac{w}{4} + (11\frac{w}{4} + 1)*w = \frac{17w^2}{16}+ \frac{3w}{2} = 17w_0^2+ 6w_0
-$$
-
-$$
-Non-bt-1D：(3*1*w+1)*w+(1*3*w+1)*w+(3*1*w+1)*w+(1*3*w+1)*w=12w^2+4w=12w_0^2+4w_0
-$$
-
 
 

@@ -344,5 +344,48 @@ for i,(images,target) in enumerate(train_loader):
         optimizer.zero_grad()
 ```
 
+## transforms
 
+torchvision.transforms进行图像缩放
 
+```python
+# 用于把一系列变换组合到一起。
+class torchvision.transforms.Compose(transforms)
+
+# 格式变换，把张量或ndarray转化为PIL图像。
+class torchvision.transforms.ToPILImage(mode=None)
+
+# 格式变换，将PIL Image或numpy.ndarray转化成张量。
+class torchvision.transforms.ToTensor
+
+# 通用变换  将用户定义的函数用作变换。
+class torchvision.transforms.Lambda(lambd)
+
+# 图像缩放，将原是PIL图像重新调整到指定形状。
+torchvision.transforms.functional.resize(img, size, interpolation=2)
+```
+
+---
+
+```python
+transforms.Compose([
+     transforms.CenterCrop(10),
+     transforms.ToTensor(), ])
+```
+
+官方文档只是将方法陈列，没有归纳总结，顺序很乱，这里总结一共有四大类，方便大家索引：
+
+- 裁剪（Crop）—— 中心裁剪：t`ransforms.CenterCrop` 随机裁剪：`transforms.RandomCrop` 随机长宽比裁剪：`transforms.RandomResizedCrop` 上下左右中心裁剪：`transforms.FiveCrop` 上下左右中心裁剪后翻转，`transforms.TenCrop`
+
+- 翻转和旋转（Flip and Rotation） ——依概率p水平翻转：`transforms.RandomHorizontalFlip(p=0.5)` 依概率p垂直翻转：`transforms.RandomVerticalFlip(p=0.5)` 随机旋转：`transforms.RandomRotation`
+
+- 图像变换（resize） ——transforms.Resize 标准化：transforms.Normalize 转为tensor，并归一化至[0-1]：transforms.ToTensor 填充：transforms.Pad 修改亮度、对比度和饱和度：transforms.ColorJitter 转灰度图：transforms.Grayscale 线性变换：
+    transforms.LinearTransformation() 仿射变换：transforms.RandomAffine 依概率p转为灰度图：transforms.RandomGrayscale 将数据转换为PILImage：transforms.ToPILImage transforms.Lambda：Apply a user-defined lambda as a transform.
+
+- 对transforms操作，使数据增强更灵活 transforms.RandomChoice(transforms)， 从给定的一系列transforms中选一个进行操作 transforms.RandomApply(transforms, p=0.5)，给一个transform加上概率，依概率进行操作 transforms.RandomOrder，将transforms中的操作随机打乱
+
+<a href="https://blog.csdn.net/qq_38410428/article/details/94719553?utm_medium=distribute.pc_relevant.none-task-blog-2%7Edefault%7EBlogCommendFromMachineLearnPai2%7Edefault-2.control&dist_request_id=&depth_1-utm_source=distribute.pc_relevant.none-task-blog-2%7Edefault%7EBlogCommendFromMachineLearnPai2%7Edefault-2.control">参考博客</a>
+
+<a href="https://blog.csdn.net/see_you_yu/article/details/106722787">参考博客</a>
+
+## ResNet网络
