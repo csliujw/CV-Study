@@ -10,7 +10,7 @@ Attention-based transformers are state-of-the-art in a range of deep learning fi
 
 基于注意力的transformers在深度学习领域效果表现很好，`SOTA`。
 
-将注意力机制加入分割中，效果很好，比其他方法更优秀。
+将注意力机制加分割中，效果很好，比其他方法更优秀。
 
 因此，本文提出了一种基于注意力机制的`Cell DETR（细胞变换检测器）`，可进行端到端的实例分割，在特定数据下，分割效果与`MaskRCNN`相当，且速度更快。
 

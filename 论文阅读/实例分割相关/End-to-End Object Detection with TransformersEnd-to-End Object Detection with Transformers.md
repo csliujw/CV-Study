@@ -1,5 +1,7 @@
 # 博客解读
 
+<a href="https://zhuanlan.zhihu.com/p/149252931?from_voters_page=true">其他参考博客</a>
+
 ## 创新点
 
 将目标检测任务转化为一个序列预测（set prediction）的任务，使用transformer编码-解码器结构和双边匹配的方法，由输入图像直接得到预测结果序列。和SOTA的检测方法不同，没有proposal（Faster R-CNN），没有anchor（YOLO），没有center(CenterNet)，也没有繁琐的NMS，直接预测检测框和类别，利用二分图匹配的匈牙利算法，将CNN和transformer巧妙的结合，实现目标检测的任务。
@@ -146,21 +148,21 @@ Recurrent detectors. Closest to our approach are end-to-end set predictions for 
 
 对象检测集损失。
 
-DETR在一次通过解码器的过程中，会推断出固定大小的N个预测集，其中N被设置为显着大于图像中对象的典型数量。 训练的主要困难之一是根据地面真相对预测的对象（类，位置，大小）进行评分。 我们的损失会在预测的和ground true之间产生最佳的二分匹配，然后优化特定于对象的（边界框）损失。 
+DETR通过解码器一次推断出固定大小的N个预测集，其中N被设置为显着大于图像中对象的典型数量。 训练的主要困难之一是根据ground truth对预测的对象（类，位置，大小）进行评分。 我们的损失会在预测的和ground true之间产生最佳的二分匹配，然后优化特定于对象的（边界框）损失。 
 
 DETR infers a fixed-size set of N predictions, in a single pass through the decoder, where N is set to be significantly larger than the typical number of objects in an image. One of the main difficulties of training is to score predicted objects (class, position, size) with respect to the ground truth. Our loss produces an optimal bipartite matching between predicted and ground truth objects, and then optimize object-specific (bounding box) losses.
 
-我们用y表示真实对象的集合，$\hat y = \{\hat y_i\}^N_{i=1}$表示N个预测的集合。假设N大于图像中的对象数，我们页将y视为大小为N的集合，并用空对象进行填充。为了找到这两个集合之间的二分匹配，我们搜索具有最低成本的N个元素σ属于$S_n$的排列
+我们用y表示真实对象的集合，$\hat y = \{\hat y_i\}^N_{i=1}$表示N个预测的集合。假设N大于图像中的对象数目，y是为大小为N的集合，其中并不都是要检测的对象，也包含无需检测出的对象。为了找到这两个集合之间的二分匹配，我们搜索具有最低成本的N个元素σ属于$S_n$的排列
 
 > 找集合的二分匹配，使这个匹配最合适
 
 ![image-20210417160648998](..\..\pics\CV\transformer\(1))
 
-其中$L_{match}(y_i,\hat y_{σ(i)})$是ground true $y_i$ 和具有索引$σ(i)$的预测之间的成对匹配成本。遵循先前的工作，使用匈牙利算法可以有效地计算出最佳分配 
+其中$L_{match}(y_i,\hat y_{σ(i)})$是ground truth $y_i$ 和索引$σ(i)$的预测之间的成对匹配成本。使用匈牙利算法可以有效地计算出最佳分配 
 
 ![image-20210417161413428](..\..\pics\CV\transformer\(1)_word)
 
-匹配成本同时考虑了类别预测及groudn true和预测值的相似性。每个groudn truth集合的元素i可以看作是$y_i=(c_i,b_i)$,$c_i$是类别标签（可能是空对象），$b_i∈[0,1]^4$是一个向量，`这个向量被定义为groudn truth box的盒中心坐标及相对于图像大小的高度和宽度。`对于预测的$σ(i)$我们可以看作是类别$c_i$ as $\hat p_{σ(i)}(c_i)$和预测框$\hat b_{σ(i)}$. 我们将$L_{match}(y_i,\hat y_{σ(i)})$定义为如下式子
+匹配成本同时考虑了类别预测及groudn truth和预测值的相似性。每个groudn truth集合的元素i可以看作是$y_i=(c_i,b_i)$,$c_i$是类别标签（可能是空对象），$b_i∈[0,1]^4$是一个向量，`这个向量被定义为groudn truth box的盒中心坐标及相对于图像大小的高度和宽度。`对于预测的$σ(i)$我们可以看作是类别$c_i$ as $\hat p_{σ(i)}(c_i)$和预测框$\hat b_{σ(i)}$. $L_{match}(y_i,\hat y_{σ(i)})$定义如下：
 
 > 二分匹配的计算方式
 
@@ -176,7 +178,7 @@ DETR infers a fixed-size set of N predictions, in a single pass through the deco
 
 $\hat σ$是上一步计算出的最佳匹配。实际上，当$c_i= \empty$时，`我们将log-probability项的权重降低了10倍，以解决类别不平衡问题。`这类似于Faster R-CNN的训练过程如何通过分段抽样平衡positive/negative proposals。`注意，对象与∅的匹配代价不依赖于预测，在这种情况下代价为常数。`在匹配成本中，我们使用概率$\hat p_{\hatσ(i)}(ci)$代替对数概率(log-probabilities)。 这使得类预测项可与$L_box(.,.)$相称（如下所述），并且我们观察到了更好的经验性能 
 
-**Bounding box loss：**匹配成本和匈牙利损失的第二部分是$L_{box}(.)$,bounding box的scores. `不像多数检测的box预测那样，先做一些初始化的猜测，我们是直接做的box预测。`尽管这种方法简化了实现，但是却带来了损失相对缩放的问题（relative scaling of the loss）。即使大小相对误差相似，最常见的$l1$损失对大小盒子的比例也会有所不同。 为了减轻这个问题，我们使用了$l1$损失和广义的IOU损失$L_{iou}(.,.)$的线性组合，该比例不变（应该是系数都是1的意思？看看代码怎么写的！）总的来说，`我们的box损失是$L_{box}(b_i,\hat b_{σ(i)})$定义为：`
+**Bounding box loss：**匹配成本和匈牙利损失的第二部分是$L_{box}(.)$,bounding box的scores. `不像多数检测的box预测那样，先做一些初始化的猜测，我们是直接做的box预测。`尽管这种方法简化了实现，但是却带来了损失相对缩放的问题（relative scaling of the loss）。即使大小相对误差相似，最常见的$l1$损失对大盒子、小盒子会有不同的刻度（scales）。 为了减轻这个问题，我们使用了$l1$损失和广义的IOU损失$L_{iou}(.,.)$的线性组合，该比例不变（应该是系数都是1的意思？看看代码怎么写的！）总的来说，我们的box损失是$L_{box}(b_i,\hat b_{σ(i)})$定义为：
 
 ![image-20210417170336776](..\..\pics\CV\transformer\L_box.png)
 
@@ -194,7 +196,7 @@ $入_{iou}, 入_{L1}∈R$是超参数。这两个损失通过批处理中对象�
 
 ![image-20210417160102874](..\..\pics\CV\transformer\DETR.png)
 
-与许多的现代检测不同，DETR可以在任何深度学习框架中实施，该宽街可提供通用的CNN主干和仅几百行的变压体系结构。DETR的推理代码可以在PyTorch中用少于50行实现！我们希望我们的方法的简便性将吸引新的研究人员进入检测领域。
+与许多的现代检测不同，DETR可以在任何深度学习框架中实施，该框架可提供通用的CNN主干和仅几百行的变压体系结构。DETR的推理代码可以在PyTorch中用少于50行实现！我们希望我们的方法的简便性将吸引新的研究人员进入检测领域。
 
 > **Backbone**
 
