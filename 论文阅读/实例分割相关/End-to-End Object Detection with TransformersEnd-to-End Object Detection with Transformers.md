@@ -32,7 +32,7 @@ CNN + encoder+decoder + FFN
 
 **Transformer encoder**部分首先将输入的特征图降维并flatten，然后送入下图左半部分所示的结构中，和空间位置编码一起并行经过多个自注意力分支、正则化和FFN，得到一组长度为N的预测目标序列。其中，每个自注意力分支的工作原理为可参考[刘岩：详解Transformer （Attention Is All You Need）](https://zhuanlan.zhihu.com/p/48508221)，也可以参照论文：[https://papers.nips.cc/paper/7181-attention-is-all-you-need.pdf](https://link.zhihu.com/?target=https%3A//papers.nips.cc/paper/7181-attention-is-all-you-need.pdf)
 
-接着，将Transformer encoder得到的预测目标序列经过上图右半部分所示的Transformer decoder，并行的解码得到输出序列（而不是像机器翻译那样逐个元素输出）。和传统的autogreesive机制不同，每个层可以解码N个目标，由于解码器的位置不变性，即调换输入顺序结果不变，除了每个像素本身的信息，位置信息也很重要，所以这N个输入嵌入必须不同以产生不同的结果，所以学习NLP里面的方法，加入positional encoding并且每层都加，**作者非常用力的在处理position的问题，在使用 transformer 处理图片类的输入的时候，一定要注意position的问题。**
+接着，将Transformer encoder得到的预测目标序列经过上图右半部分所示的Transformer decoder，并行的解码得到输出序列（而不是像机器翻译那样逐个元素输出）。和传统的autogreesive机制不同，每个层可以解码N个目标，由于解码器的位置不变性，即调换输入顺序结果不变，除了每个像素本身的信息，位置信息也很重要，所以这N个输入嵌入必须不同以产生不同的结果，所以学习NLP里面的方法，加入positional encoding并且每层都加，==作者非常用力的在处理position的问题，在使用 transformer 处理图片类的输入的时候，一定要注意position的问题。==
 
 >预测头部（FFN）
 
