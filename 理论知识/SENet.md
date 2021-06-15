@@ -6,7 +6,7 @@
 
 神经网络中，注意力机制通常是一个额外的神经网络，能够硬性选择输入的某些部分，或者给输入的不同部分分配不同的权重。注意力机制能够从大量信息中筛选出重要的信息。
 
-SE-net（Squeeze-and-Excitation networks)
+SE-Net（Squeeze-and-Excitation networks)
 
 ![image-20210404124745019](..\pics\CV\ISG\注意力机制\image-20210404124745019.png)
 
