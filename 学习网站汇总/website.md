@@ -33,6 +33,7 @@
 <a href="https://zhuanlan.zhihu.com/p/58883095">常见的损失函数(loss function)总结</a>
 
 ## 部分值得参考的博客
+<a href="https://www.freesion.com/article/90891214471/">医疗3D卷积</a>
 
 <a href="https://www.cnblogs.com/Terrypython/category/1255030.html">机器学习&视觉</a>
 
