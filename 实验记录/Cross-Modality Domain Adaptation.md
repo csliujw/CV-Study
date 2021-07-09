@@ -129,7 +129,7 @@ if __name__ == '__main__':
 
 ## 数据特点
 
-数据通道数非常乱
+三维数据，数据的维度不太一样
 
 ```shell
 --- training
@@ -142,3 +142,18 @@ if __name__ == '__main__':
 	验证数据集 40、80通道 图片大小 448*448, 384*384
 ```
 
+# 选用的论文与代码
+
+> 论文
+
+Squeeze-and-Excitation Normalization for Automated Delineation of Head and Neck Primary Tumors in Combined PET and CT Images
+
+> 代码
+
+https://github.com/iantsen/hecktor
+
+## 代码修改
+
+先调整读数据集那块。
+
+我发现，train的时候只使用了input与mask。故先处理这两个试试

@@ -1,5 +1,7 @@
 # Swin Unet
 
+<a href="https://www.cnblogs.com/shuimuqingyang/p/14776524.html">别人的博客就是清楚</a>
+
 # Abstract
 
 在过去的几年里，卷积神经网络在医学图像分析中取得了里程碑式的进展。特别是基于U型结构和跳跃连接的深度神经网络，已经广泛应用于各种医学图像任务中。然而，CNN虽然取得了优异的性能，但由于==卷积运算的局部性，无法很好地学习全局和长程语义信息交互==。本文提出了==Swin-Unet，一种用于医学图像分割的类Unet纯transformer。==token（符号化）化的图像补丁被馈送到基于转换器的U型编码器-解码器架构中，==该架构具有用于局部全局语义特征学习的跳过连接==。具体来说，我们使用具有移位窗口的分层Swin transformer作为编码器来提取上下文特征。设计了一个对称的基于Swin transformer的带补片扩展层的解码器来执行上采样操作，以恢复特征图的空间分辨率。在输入和输出直接下采样和上采样4倍的情况下，多器官和心脏分割任务的实验表明，纯基于变压器的U形编解码网络优于全卷积或变压器和卷积组合的方法。代码和经过培训的模型将在https://github.com/HuCaoFighting/Swin-Unet.公开发布
@@ -42,7 +44,7 @@ CNN及其变种在建模长期依赖关系时仍然具有局限性，
 
 **Vision transformers :**transformer最初是在[15]中为机器翻译任务提出的。在自然语言处理领域，基于transformer的方法在各种任务中取得了最先进的性能[24]。在transformer的成功推动下，研究人员在[17]中引入了一种开创性的视觉transformer(ViT)，它在图像识别任务中实现了令人印象深刻的速度-精度权衡。与基于CNN的方法相比，ViT的缺点是需要在自己的大数据集上进行预训练。为了减轻训练ViT的困难，Deit  [18]描述了几种训练策略，使ViT能够在ImageNet上进行良好的训练。最近，在ViT  [25，26，19]上完成了几个优秀的作品。值得一提的是，在[19]中提出了一种高效且有效的分层视觉转换器，称为Swin  Transformer，作为视觉通用backbone。==基于移动窗口机制，Swin  Transformer在包括图像分类、目标检测和语义分割在内的各种视觉任务上取得了最先进的性能在这项工作中==，我们试图以Swin  Transformer块为基本单元，构建一个具有跳跃连接的U型编解码架构，用于医学图像分割，从而为Transformer在医学图像领域的发展提供一个基准比较。
 
-**Self-attention/Transformer to complement CNNs :**近年来，研究人员试图将自我注意机制引入CNN，以提高网络的性能[13]。在参考文献[12]中，具有附加注意门的跳跃连接被集成在U形结构中以执行医学图像分割。然而，这仍然是基于CNN的方法。目前，正在努力将CNN和Transformer结合起来，以打破CNN在医学图像分割中的主导地位[2，27，1]。在文献[2]中，作者将Transformer和CNN相结合，构成了一个用于2D医学图像分割的强编码器。类似于[2]，[27]和[28]利用Transformer和CNN的互补性来提高模型的分割能力。==目前，Transformer和CNN的各种组合被应用于多模态脑肿瘤分割[29]和3D医学图像分割[1]\30]。==不同于上述方法，==我们尝试探索纯Transformer在医学图像分割中的应用潜力。==
+**Self-attention/Transformer to complement CNNs :**近年来，研究人员试图将自我注意机制引入CNN，以提高网络的性能[13]。在参考文献[12]中，具有附加注意门的跳跃连接被集成在U形结构中以执行医学图像分割。然而，这仍然是基于CNN的方法。目前，正在努力将CNN和Transformer结合起来，以打破CNN在医学图像分割中的主导地位[2，27，1]。在文献[2]中，作者将Transformer和CNN相结合，构成了一个用于2D医学图像分割的强编码器。类似于[2]，[27]和[28]利用Transformer和CNN的互补性来提高模型的分割能力。==目前，Transformer和CNN的各种组合被应用于多模态脑肿瘤分割[29]和3D医学图像分割[1]\[30]。==不同于上述方法，==我们尝试探索纯Transformer在医学图像分割中的应用潜力。==
 
 # Method
 
@@ -58,7 +60,7 @@ Swin-Unet由编码器、瓶颈、解码器和跳转连接组成。Swin Unet的�
 
  ## Swin Transformer block
 
-Swin Transformer block是基于 shifted windows. 构建的。
+Swin Transformer block是基于 shifted windows构建的。
 
 <img src="..\..\pics\CV\transformer\swin-transformer-block.png">
 
@@ -102,8 +104,6 @@ Synapse multi-organ segmentation dataset  多器官分割数据集。
 
 数据集包括30个病例，3779张轴向腹部临床CT图像。请看参考文献2，34
 
-<img src="..\..\pics\CV\transformer\swin-unet-exp.png">
-
 18个样本分为训练集，12个样本分为测试集。以平均Dice-Similarity coefficient（DSC）和平均Hausdorff Distance距离作为评价指标，对8个腹部器官(主动脉、胆囊、脾脏、左肾、右肾、肝脏、胰腺、脾脏、胃)进行评价。
 
 自动心脏诊断挑战数据集(ACDC):ACDC数据集是使用磁共振扫描仪从不同患者收集的。对于每个患者的磁共振图像，标记左心室、右心室和心肌(MYO)。数据集分为70个训练样本、10个验证样本和20个测试样本。类似于[2]，只有平均DSC用于评估我们在该数据集上的方法。
@@ -114,3 +114,56 @@ Swin-Unet是基于Python 3.6和Pytorch  1.7.0实现的。对于所有训练案�
 
 ## Experiment results on Synapse dataset
 
+在Synapse多器官CT扫描数据集上，Swin Unet与之前方法的比较如表一所示。
+
+<img src="..\..\pics\CV\transformer\swin-unet-exp.png">
+
+是用的自己实现的U-Net和TransUnet进行的训练。
+
+如图三所示：基于CNN的方法存在过分割的问题，可能是卷积运算的局部性造成的。在这项工作中，我们证明了通过将变压器与具有跳跃连接的U形架构相集成，没有卷积的纯Transformer可以更好地学习全局和长期语义信息交互，从而产生更好地分割效果。
+
+<img src="..\..\pics\CV\transformer\swin-unet-seg.png">
+
+
+
+## Experiment results on ACDC dataset
+
+与Synapse数据集相似，所提出的Swin-Unet在ACDC数据集上训练以执行医学图像分割。实验结果总结在表2中，通过使用磁共振模式的图像数据作为输入，Swin Unet仍然能够以90.00%的准确率获得优异的性能，这表明我们的方法具有良好的泛化能力和鲁棒性。
+
+<img src="..\..\pics\CV\transformer\swin-unet-exp2.png">
+
+## Ablation study
+
+主要是对上采样、跳跃连接的数量、输入图片的大小和模型比例进行消融实验。
+
+### 上采样
+
+设计了一个专门的上采样模块，patch expanding layer。为了验证patch expanding layer效果的确是更好，采用了双线性插值、转置卷积、patch expanding layer进行实验。结果如表三所示：的确是patch expanding layer效果更好。
+
+<img src="..\..\pics\CV\transformer\image-20210615212159669.png">
+
+### 跳跃连接
+
+探讨了不同跳跃连接数对分割精度的影响。跳跃连接是被加在了$\frac{1}{4} \space \frac{1}{8} \space \frac{1}{16} $分辨率等级的位置。
+
+<img src="..\..\pics\CV\transformer\image-20210615212906276.png">
+
+### 输入图片尺寸
+
+测试了$224*224 和 384*384$，patch大小不变仍为4，实验发现，Transformer的输入token越大，模型分割精度越高。但是网络的计算量也显著增加。为了效率，选取的224大小的。
+
+<img src="..\..\pics\CV\transformer\image-20210615213924224.png">
+
+### 加深网络
+
+几乎没有提升，所以采用的tiny模型。
+
+<img src="..\..\pics\CV\transformer\image-20210615214129324.png">
+
+## Discussion
+
+transformer-based model受预训练模型额严重影响（**那TransUnet是不是也很受预训练权重的影响？？**）。直接使用了ImageNet上Swin transformer地预训练权重。我们使用的是2D图像，而大多数医疗图像是3D的，我们将探索3D图像的分割。
+
+# Conclusion
+
+大量实验表明，我们的Swin-Unet性能好，泛化能力强。
