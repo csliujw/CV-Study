@@ -286,8 +286,6 @@ if __name__ == '__main__':
     # d1.show_image()
 ```
 
-
-
 ## reszie策略
 
 细胞存在变形，所以细胞有所扭曲问题不大。
@@ -759,5 +757,17 @@ class unsqueezeDemo:
 if __name__ == '__main__':
     d = unsqueezeDemo()
     d.se1()
+```
+
+# OpenCV绘画
+
+## 目标检测绘制矩形框
+
+```python
+import cv2
+
+img = cv2.imread("图片路径")
+# 图片  左上角坐标的信息	右下角坐标点信息	矩形框的RGB颜色	1好像是线的粗细啥的。
+cv2.rectangle(img,(xmin,ymin),(xmax,ymax),(0,255,0),1)
 ```
 

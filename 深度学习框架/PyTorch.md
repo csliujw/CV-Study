@@ -2242,5 +2242,21 @@ print(l1, l2)
 
 ---
 
+# 自定义PyTorch的功能
 
+## 自定义损失函数
+
+```python
+class DiceLoss(nn.Module):
+    def __init__(self):
+        super(DiceLoss, self).__init__()
+        self.smooth = 1
+
+    def forward(self, input, target):
+        axes = tuple(range(1, input.dim()))
+        intersect = (input * target).sum(dim=axes)
+        union = torch.pow(input, 2).sum(dim=axes) + torch.pow(target, 2).sum(dim=axes)
+        loss = 1 - (2 * intersect + self.smooth) / (union + self.smooth)
+        return loss.mean()
+```
 
